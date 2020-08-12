@@ -1,4 +1,4 @@
-package client
+package ftb
 
 type Dimension interface {
 	GetName() string

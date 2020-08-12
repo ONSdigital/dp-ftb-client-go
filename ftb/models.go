@@ -18,14 +18,14 @@ type QueryDimension struct {
 }
 
 type QueryResult struct {
-	Counts        int         `json:"counts"`
+	Counts        []int       `json:"counts"`
 	DatasetDigest string      `json:"datasetDigest"`
 	Dimensions    []Dimension `json:"dimensions"`
 }
 
 type Dimension struct {
-	Name              string   `json:"name"`
-	CatOffsetLenPairs []string `json:"catOffsetLenPairs"`
+	Name              string `json:"name"`
+	CatOffsetLenPairs []int  `json:"catOffsetLenPairs"`
 }
 
 func (fq *FilterQuery) createRequest(host, authToken string) (*http.Request, error) {

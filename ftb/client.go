@@ -22,8 +22,8 @@ type Client struct {
 	HttpCli   dphttp.Clienter
 }
 
-func (c *Client) Query(ctx context.Context, query FilterQuery) error {
-	r, err := query.createRequest(c.Host, c.AuthToken)
+func (c *Client) Query(ctx context.Context, q FilterQuery) error {
+	r, err := q.newQueryRequest(c.Host, c.AuthToken)
 	if err != nil {
 		return err
 	}
@@ -33,8 +33,8 @@ func (c *Client) Query(ctx context.Context, query FilterQuery) error {
 		return err
 	}
 
-	if result.IsBlockedByDisclosureControl() {
-		return c.newDisclosureControlErr(ctx, query.DatasetName, query.RootDimension, result.EvalCatOffsetLenPairs)
+	if result.IsBlockedByRules() {
+		return c.blockedByRulesError(ctx, q.DatasetName, q.RootDimension, result)
 	}
 
 	return nil
@@ -100,24 +100,29 @@ func (c *Client) doQuery(ctx context.Context, r *http.Request) (*QueryResult, er
 	return &result, nil
 }
 
-func (c *Client) newDisclosureControlErr(ctx context.Context, dataset, dimension string, blocked []int) error {
+func (c *Client) blockedByRulesError(ctx context.Context, dataset, rootDimension string, res *QueryResult) error {
+	blockedCodeIndices, err := res.getBlockedCodeIndices()
+	if err != nil {
+		return err
+	}
+
+	blockedDimensionCodes, err := c.getCodesBlockedByRules(ctx, dataset, rootDimension, blockedCodeIndices)
+	if err != nil {
+		return err
+	}
+
+	return newRulesError(rootDimension, blockedDimensionCodes)
+}
+
+func (c *Client) getCodesBlockedByRules(ctx context.Context, dataset, dimension string, indices []int) ([]string, error) {
 	codes := make([]string, 0)
 
-	for i := 0; i < len(blocked); i += 2 {
-		start := blocked[i]
-		end := start + (blocked[i+1] - 1)
-
-		for i := start; i <= end; i++ {
-			dim, err := c.GetDimensionByIndex(ctx, dataset, dimension, i)
-			if err != nil {
-				return err
-			}
-			codes = append(codes, dim.Name)
+	for _, index := range indices {
+		dim, err := c.GetDimensionByIndex(ctx, dataset, dimension, index)
+		if err != nil {
+			return nil, err
 		}
-
+		codes = append(codes, dim.Name)
 	}
-	return DisclosureControlError{
-		dimension: dimension,
-		codes:     codes,
-	}
+	return codes, nil
 }

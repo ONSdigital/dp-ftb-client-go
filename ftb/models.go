@@ -1,16 +1,12 @@
 package ftb
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
 	"strings"
 )
-
-type DisclosureControlError struct {
-	dimension string
-	codes     []string
-}
 
 type DimensionDetails struct {
 	Name  string
@@ -47,7 +43,11 @@ type Dimension struct {
 	CatOffsetLenPairs []int  `json:"catOffsetLenPairs"`
 }
 
-func (fq *FilterQuery) createRequest(host, authToken string) (*http.Request, error) {
+type RulesError struct {
+	msg string
+}
+
+func (fq *FilterQuery) newQueryRequest(host, authToken string) (*http.Request, error) {
 	ftbURL, err := url.Parse(fmt.Sprintf("%s/v6/query/%s?", host, fq.DatasetName))
 	if err != nil {
 		return nil, err
@@ -74,10 +74,36 @@ func (fq *FilterQuery) createRequest(host, authToken string) (*http.Request, err
 	return r, nil
 }
 
-func (r *QueryResult) IsBlockedByDisclosureControl() bool {
+func (r *QueryResult) IsBlockedByRules() bool {
 	return r.EvalCatOffsetLenPairs != nil && len(r.EvalCatOffsetLenPairs) > 0
 }
 
-func (err DisclosureControlError) Error() string {
-	return fmt.Sprintf("Disclosure control applied to Dimension: %s, [%s]", err.dimension, strings.Join(err.codes, ","))
+func (r *QueryResult) getBlockedCodeIndices() ([]int, error) {
+	if len(r.EvalCatOffsetLenPairs)%2 != 0 {
+		return nil, errors.New("incorrect input")
+	}
+
+	codes := make([]int, 0)
+	for i := 0; i < len(r.EvalCatOffsetLenPairs); i += 2 {
+		startIndex := r.EvalCatOffsetLenPairs[i]
+		count := r.EvalCatOffsetLenPairs[i+1]
+
+		endIndex := startIndex + count - 1
+
+		for i := startIndex; i <= endIndex; i++ {
+			codes = append(codes, i)
+		}
+	}
+
+	return codes, nil
+}
+
+func newRulesError(dimension string, codes []string) error {
+	return RulesError{
+		msg: fmt.Sprintf("filter unsuccessful disclosure control applied to Dimension codes : %s, [%s]", dimension, strings.Join(codes, ",")),
+	}
+}
+
+func (err RulesError) Error() string {
+	return err.msg
 }

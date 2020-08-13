@@ -7,9 +7,27 @@ import (
 	"strings"
 )
 
+type DisclosureControlError struct {
+	dimension string
+	codes     []string
+}
+
+type DimensionDetails struct {
+	Name  string
+	Code  string
+	Index int
+}
+
+type DimensionResponse struct {
+	Index int    `json:"index"`
+	Name  string `json:"name"`
+	Code  string `json:"code"`
+}
+
 type FilterQuery struct {
-	DatasetName string
-	Dimensions  []QueryDimension
+	DatasetName   string
+	Dimensions    []QueryDimension
+	RootDimension string
 }
 
 type QueryDimension struct {
@@ -18,9 +36,10 @@ type QueryDimension struct {
 }
 
 type QueryResult struct {
-	Counts        []int       `json:"counts"`
-	DatasetDigest string      `json:"datasetDigest"`
-	Dimensions    []Dimension `json:"dimensions"`
+	Counts                []int       `json:"counts"`
+	DatasetDigest         string      `json:"datasetDigest"`
+	Dimensions            []Dimension `json:"dimensions"`
+	EvalCatOffsetLenPairs []int       `json:"evalCatOffsetLenPairs"`
 }
 
 type Dimension struct {
@@ -39,7 +58,7 @@ func (fq *FilterQuery) createRequest(host, authToken string) (*http.Request, err
 		if len(d.Options) > 0 {
 			dimName := strings.ToUpper(d.Name)
 			q.Add(dimParam, dimName)
-			q.Add(includeParam, fmt.Sprintf("%s,%s", d.Name, strings.Join(d.Options, ",")))
+			q.Add(includeParam, fmt.Sprintf("%s,%s", dimName, strings.Join(d.Options, ",")))
 		}
 	}
 
@@ -53,4 +72,12 @@ func (fq *FilterQuery) createRequest(host, authToken string) (*http.Request, err
 		r.Header.Set("Authorization", "Bearer "+authToken)
 	}
 	return r, nil
+}
+
+func (r *QueryResult) IsBlockedByDisclosureControl() bool {
+	return r.EvalCatOffsetLenPairs != nil && len(r.EvalCatOffsetLenPairs) > 0
+}
+
+func (err DisclosureControlError) Error() string {
+	return fmt.Sprintf("Disclosure control applied to Dimension: %s, [%s]", err.dimension, strings.Join(err.codes, ","))
 }

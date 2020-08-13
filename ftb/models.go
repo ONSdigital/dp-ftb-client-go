@@ -44,7 +44,8 @@ type Dimension struct {
 }
 
 type RulesError struct {
-	msg string
+	Dimension      string
+	BlockedOptions []string
 }
 
 func (fq *FilterQuery) newQueryRequest(host, authToken string) (*http.Request, error) {
@@ -100,10 +101,11 @@ func (r *QueryResult) getBlockedCodeIndices() ([]int, error) {
 
 func newRulesError(dimension string, codes []string) error {
 	return RulesError{
-		msg: fmt.Sprintf("filter unsuccessful disclosure control applied to Dimension codes : %s, [%s]", dimension, strings.Join(codes, ",")),
+		Dimension:      dimension,
+		BlockedOptions: codes,
 	}
 }
 
 func (err RulesError) Error() string {
-	return err.msg
+	return fmt.Sprintf("filter unsuccessful disclosure control applied to Dimension codes : %s, [%s]", err.Dimension, strings.Join(err.BlockedOptions, ","))
 }

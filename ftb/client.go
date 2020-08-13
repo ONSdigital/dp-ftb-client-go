@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net/http"
 
@@ -41,10 +42,14 @@ func (c *Client) Query(ctx context.Context, q FilterQuery) error {
 }
 
 func (c *Client) GetDimensionByIndex(ctx context.Context, dataset, dimension string, index int) (*DimensionResponse, error) {
-	r, err := http.NewRequest(http.MethodGet, fmt.Sprintf("%s/v6/datasets/%s/dimensions/%s/index/%d", c.Host, dataset, dimension, index), nil)
+	url := fmt.Sprintf("%s/v6/datasets/%s/dimensions/%s/index/%d", c.Host, dataset, dimension, index)
+
+	r, err := c.newRequestWithAuthHeader(http.MethodGet, url, nil)
 	if err != nil {
 		return nil, err
 	}
+
+	r.Header.Set("Authorization", "Bearer "+c.AuthToken)
 
 	resp, err := c.HttpCli.Do(ctx, r)
 	if err != nil {
@@ -125,4 +130,14 @@ func (c *Client) getCodesBlockedByRules(ctx context.Context, dataset, dimension 
 		codes = append(codes, dim.Name)
 	}
 	return codes, nil
+}
+
+func (c *Client) newRequestWithAuthHeader(method, url string, body io.Reader) (*http.Request, error) {
+	r, err := http.NewRequest(method, url, body)
+	if err != nil {
+		return nil, err
+	}
+
+	r.Header.Set("Authorization", "Bearer "+c.AuthToken)
+	return r, nil
 }

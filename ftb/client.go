@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
 	"io/ioutil"
 	"net/http"
 
@@ -15,41 +14,102 @@ import (
 const (
 	dimParam     = "dim"
 	includeParam = "incl"
+
+	StatusOK      = "OK"
+	StatusBlocked = "Blocked"
 )
 
-type Client struct {
+type Clienter interface {
+	Query(ctx context.Context, q Query) (*QueryResult, error)
+	GetDimensionByIndex(ctx context.Context, dataset, dimension string, index int) (*GetDimensionOptionResponse, error)
+}
+
+type client struct {
 	AuthToken string
 	Host      string
 	HttpCli   dphttp.Clienter
 }
 
-func (c *Client) Query(ctx context.Context, q FilterQuery) error {
-	r, err := q.newQueryRequest(c.Host, c.AuthToken)
-	if err != nil {
-		return err
-	}
-
-	result, err := c.doQuery(ctx, r)
-	if err != nil {
-		return err
-	}
-
-	if result.IsBlockedByRules() {
-		return c.blockedByRulesError(ctx, q.DatasetName, q.RootDimension, result)
-	}
-
-	return nil
+// input
+type Query struct {
+	DatasetName       string
+	DimensionsOptions []DimensionOptions
+	RootDimension     string
 }
 
-func (c *Client) GetDimensionByIndex(ctx context.Context, dataset, dimension string, index int) (*DimensionResponse, error) {
-	url := fmt.Sprintf("%s/v6/datasets/%s/dimensions/%s/index/%d", c.Host, dataset, dimension, index)
+type DimensionOptions struct {
+	Name    string
+	Options []string
+}
 
-	r, err := c.newRequestWithAuthHeader(http.MethodGet, url, nil)
+// return
+type QueryResult struct {
+	Status                   string
+	DisclosureControlDetails *DisclosureControlDetails
+}
+
+// return
+type DisclosureControlDetails struct {
+	Dimension      string   `bson:"dimension"       json:"dimension,omitempty"`
+	BlockedOptions []string `bson:"blocked_options" json:"blocked_options,omitempty"`
+}
+
+func NewClient(host, authToken string, httpCli dphttp.Clienter) Clienter {
+	return &client{
+		AuthToken: authToken,
+		Host:      host,
+		HttpCli:   httpCli,
+	}
+}
+
+func (c *client) Query(ctx context.Context, q Query) (*QueryResult, error) {
+	r, err := newQueryRequest(q, c.Host, c.AuthToken)
 	if err != nil {
 		return nil, err
 	}
 
-	r.Header.Set("Authorization", "Bearer "+c.AuthToken)
+	resp, err := c.doQuery(ctx, r)
+	if err != nil {
+		return nil, err
+	}
+
+	return c.mapResponseToFilterResult(ctx, resp, q.DatasetName, q.RootDimension)
+}
+
+func (c *client) mapResponseToFilterResult(ctx context.Context, resp *queryResponse, dataset, rootDim string, ) (*QueryResult, error) {
+	if !resp.BlockedByRules() {
+		return &QueryResult{Status: StatusOK, DisclosureControlDetails: nil}, nil
+	}
+
+	blockedCodeIndices, err := resp.getBlockedCodeIndices()
+	if err != nil {
+		return nil, err
+	}
+
+	blockedDimensionCodes := make([]string, 0)
+
+	for _, index := range blockedCodeIndices {
+		dim, err := c.GetDimensionByIndex(ctx, dataset, rootDim, index)
+		if err != nil {
+			return nil, err
+		}
+
+		blockedDimensionCodes = append(blockedDimensionCodes, dim.Code)
+	}
+
+	result := &QueryResult{
+		Status: StatusBlocked,
+		DisclosureControlDetails: &DisclosureControlDetails{
+			Dimension:      rootDim,
+			BlockedOptions: blockedDimensionCodes,
+		},
+	}
+
+	return result, nil
+}
+
+func (c *client) GetDimensionByIndex(ctx context.Context, dataset, dimension string, index int) (*GetDimensionOptionResponse, error) {
+	r, err := newGetDimensionByIndexRequest(c.Host, c.AuthToken, dataset, dimension, index)
 
 	resp, err := c.HttpCli.Do(ctx, r)
 	if err != nil {
@@ -66,7 +126,7 @@ func (c *Client) GetDimensionByIndex(ctx context.Context, dataset, dimension str
 		return nil, err
 	}
 
-	var dim DimensionResponse
+	var dim GetDimensionOptionResponse
 	err = json.Unmarshal(body, &dim)
 	if err != nil {
 		return nil, err
@@ -75,7 +135,7 @@ func (c *Client) GetDimensionByIndex(ctx context.Context, dataset, dimension str
 	return &dim, nil
 }
 
-func (c *Client) doQuery(ctx context.Context, r *http.Request) (*QueryResult, error) {
+func (c *client) doQuery(ctx context.Context, r *http.Request) (*queryResponse, error) {
 	resp, err := c.HttpCli.Do(context.Background(), r)
 	if err != nil {
 		return nil, err
@@ -91,7 +151,7 @@ func (c *Client) doQuery(ctx context.Context, r *http.Request) (*QueryResult, er
 		return nil, err
 	}
 
-	var result QueryResult
+	var result queryResponse
 	err = json.Unmarshal(body, &result)
 	if err != nil {
 		return nil, err
@@ -105,39 +165,6 @@ func (c *Client) doQuery(ctx context.Context, r *http.Request) (*QueryResult, er
 	return &result, nil
 }
 
-func (c *Client) blockedByRulesError(ctx context.Context, dataset, rootDimension string, res *QueryResult) error {
-	blockedCodeIndices, err := res.getBlockedCodeIndices()
-	if err != nil {
-		return err
-	}
-
-	blockedDimensionCodes, err := c.getCodesBlockedByRules(ctx, dataset, rootDimension, blockedCodeIndices)
-	if err != nil {
-		return err
-	}
-
-	return newRulesError(rootDimension, blockedDimensionCodes)
-}
-
-func (c *Client) getCodesBlockedByRules(ctx context.Context, dataset, dimension string, indices []int) ([]string, error) {
-	codes := make([]string, 0)
-
-	for _, index := range indices {
-		dim, err := c.GetDimensionByIndex(ctx, dataset, dimension, index)
-		if err != nil {
-			return nil, err
-		}
-		codes = append(codes, dim.Name)
-	}
-	return codes, nil
-}
-
-func (c *Client) newRequestWithAuthHeader(method, url string, body io.Reader) (*http.Request, error) {
-	r, err := http.NewRequest(method, url, body)
-	if err != nil {
-		return nil, err
-	}
-
-	r.Header.Set("Authorization", "Bearer "+c.AuthToken)
-	return r, nil
+func (q *QueryResult) IsBlockedByRules() bool {
+	return q.Status == StatusBlocked
 }

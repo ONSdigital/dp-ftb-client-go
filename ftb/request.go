@@ -16,9 +16,10 @@ func newQueryRequest(fq Query, host, authToken string) (*http.Request, error) {
 
 	q := ftbURL.Query()
 	for _, d := range fq.DimensionsOptions {
+		dimName := strings.ToUpper(d.Name)
+		q.Add(dimParam, dimName)
+
 		if len(d.Options) > 0 {
-			dimName := strings.ToUpper(d.Name)
-			q.Add(dimParam, dimName)
 			q.Add(includeParam, fmt.Sprintf("%s,%s", dimName, strings.Join(d.Options, ",")))
 		}
 	}

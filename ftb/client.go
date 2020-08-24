@@ -46,6 +46,7 @@ type DimensionOptions struct {
 type QueryResult struct {
 	Status                   string
 	DisclosureControlDetails *DisclosureControlDetails
+	Counts                   []int
 }
 
 // return
@@ -60,6 +61,20 @@ func NewClient(host, authToken string, httpCli dphttp.Clienter) Clienter {
 		Host:      host,
 		HttpCli:   httpCli,
 	}
+}
+
+func NewQuery(dataset, rootDim string, params map[string][]string) Query {
+	q := Query{
+		DatasetName:       dataset,
+		RootDimension:     rootDim,
+		DimensionsOptions: make([]DimensionOptions, 0),
+	}
+
+	for k, v := range params {
+		q.DimensionsOptions = append(q.DimensionsOptions, DimensionOptions{Name: k, Options: v})
+	}
+
+	return q
 }
 
 func (c *client) Query(ctx context.Context, q Query) (*QueryResult, error) {
@@ -98,6 +113,7 @@ func (c *client) mapResponseToFilterResult(ctx context.Context, resp *queryRespo
 	}
 
 	result := &QueryResult{
+		Counts: resp.Counts,
 		Status: StatusBlocked,
 		DisclosureControlDetails: &DisclosureControlDetails{
 			Dimension:      rootDim,

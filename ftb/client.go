@@ -93,7 +93,11 @@ func (c *client) Query(ctx context.Context, q Query) (*QueryResult, error) {
 
 func (c *client) mapResponseToFilterResult(ctx context.Context, resp *queryResponse, dataset, rootDim string, ) (*QueryResult, error) {
 	if !resp.BlockedByRules() {
-		return &QueryResult{Status: StatusOK, DisclosureControlDetails: nil}, nil
+		return &QueryResult{
+			Counts:                   resp.Counts,
+			Status:                   StatusOK,
+			DisclosureControlDetails: nil,
+		}, nil
 	}
 
 	blockedCodeIndices, err := resp.getBlockedCodeIndices()

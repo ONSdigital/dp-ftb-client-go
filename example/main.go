@@ -41,7 +41,7 @@ func run() error {
 		RootDimension: "COUNTRY",
 	}
 
-	ftbCli := ftb.NewClient("http://99.80.12.125:10100", os.Getenv("AUTH_PROXY_TOKEN"), dphttp.DefaultClient)
+	ftbCli := ftb.NewClient("<IP_ADDR_HERE>", os.Getenv("AUTH_PROXY_TOKEN"), dphttp.DefaultClient)
 
 	res, err := ftbCli.Query(context.Background(), q)
 	if err != nil {

@@ -8,7 +8,6 @@ import (
 	"net/http"
 
 	dphttp "github.com/ONSdigital/dp-net/http"
-	"github.com/ONSdigital/log.go/log"
 )
 
 const (
@@ -176,11 +175,6 @@ func (c *client) doQuery(ctx context.Context, r *http.Request) (*queryResponse, 
 	if err != nil {
 		return nil, err
 	}
-
-	log.Event(ctx, "FTB query response", log.INFO, log.Data{
-		"url":    r.URL.String(),
-		"result": result,
-	})
 
 	return &result, nil
 }

@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"os"
 
@@ -11,26 +10,17 @@ import (
 	"github.com/ONSdigital/log.go/log"
 )
 
-var (
-	// in the real world this would be a codebook look up.
-	codebookLabels = map[string]string{
-		"synE92000001": "England",
-		"synW92000004": "Wales",
-		"0-15":         "Age 0 to 15",
-		"16-90":        "Age 16 and over",
-		"1":            "Male",
-		"2":            "Female",
-	}
-)
-
 func main() {
-	if err := run(); err != nil {
-		log.Event(nil, "whoops", log.Error(err), log.ERROR)
+	err := run()
+	if err != nil {
+		log.Event(nil, "borked", log.Error(err), log.ERROR)
 		os.Exit(1)
 	}
 }
 
 func run() error {
+	ftbCli := ftb.NewClient("", os.Getenv("AUTH_PROXY_TOKEN"), dphttp.DefaultClient)
+
 	q := ftb.Query{
 		DatasetName: "People",
 		DimensionsOptions: []ftb.DimensionOptions{
@@ -41,52 +31,16 @@ func run() error {
 		RootDimension: "COUNTRY",
 	}
 
-	ftbCli := ftb.NewClient("<IP_ADDR_HERE>", os.Getenv("AUTH_PROXY_TOKEN"), dphttp.DefaultClient)
-
-	res, err := ftbCli.Query(context.Background(), q)
+	result, err := ftbCli.Query(context.Background(), q)
 	if err != nil {
 		return err
 	}
 
-	rows := getObservationPermutations(q)
-	observationValues := res.Counts
-
-	if len(rows) != len(observationValues) {
-		return errors.New("BORK")
+	if result.IsBlocked() {
+		fmt.Println("query restricted by disclosure controls")
+		return nil
 	}
 
-	fmt.Println()
-	for i, r := range rows {
-		fmt.Printf("\t%s %d\n", r, observationValues[i])
-	}
-
+	result.ObservationsTable.Print()
 	return nil
-}
-
-func getObservationPermutations(query ftb.Query) []string {
-	permutations := make([]string, 0)
-
-	for _, dim := range query.DimensionsOptions {
-		options := dim.Options
-
-		if len(permutations) == 0 {
-			for _, opt := range options {
-				permutations = append(permutations, codebookLabels[opt])
-			}
-			continue
-		}
-
-		updated := make([]string, 0)
-
-		for _, currentValue := range permutations {
-			for _, opt := range options {
-				label := codebookLabels[opt]
-				updated = append(updated, fmt.Sprintf("%s %s", currentValue, label))
-			}
-		}
-
-		permutations = updated
-	}
-
-	return permutations
 }

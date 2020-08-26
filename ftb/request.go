@@ -47,3 +47,8 @@ func httpRequestWithAuthHeader(authToken, method, url string, body io.Reader) (*
 	r.Header.Set("Authorization", "Bearer "+authToken)
 	return r, nil
 }
+
+func newGetDimensionReq(host, authToken, dataset, dimension string) (*http.Request, error) {
+	ftbURL := fmt.Sprintf("%s/v6/codebook/%s?var=%s", host, dataset, dimension)
+	return httpRequestWithAuthHeader(authToken, http.MethodGet, ftbURL, nil)
+}

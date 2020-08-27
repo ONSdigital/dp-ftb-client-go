@@ -6,8 +6,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
-
-	"github.com/ONSdigital/dp-ftb-client-go/codebook"
 )
 
 const (
@@ -82,13 +80,43 @@ func (c *client) Query(ctx context.Context, q Query) (*QueryResult, error) {
 		return result, nil
 	}
 
-	table, err := createObservationsTable(q.DatasetName, q.DimensionsOptions, resp.Counts)
+	dimensions, err := c.getDimensionDetails(q.DatasetName, q.DimensionsOptions)
+	if err != nil {
+		return nil, err
+	}
+
+	table, err := getObservationsTable(q.DatasetName, q.DimensionsOptions, dimensions, resp.Counts)
 	if err != nil {
 		return nil, err
 	}
 
 	result.ObservationsTable = table
 	return result, nil
+}
+
+func (c *client) doQuery(ctx context.Context, r *http.Request) (*queryResponse, error) {
+	resp, err := c.HttpCli.Do(ctx, r)
+	if err != nil {
+		return nil, err
+	}
+
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("ftb status error: %d", resp.StatusCode)
+	}
+
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	var result queryResponse
+	err = json.Unmarshal(body, &result)
+	if err != nil {
+		return nil, err
+	}
+
+	return &result, nil
 }
 
 func (c *client) getDCStatus(ctx context.Context, resp *queryResponse, datasetName, rootDimension string) (*DisclosureControlDetails, error) {
@@ -123,88 +151,6 @@ func (c *client) getDCStatus(ctx context.Context, resp *queryResponse, datasetNa
 	}, nil
 }
 
-func (c *client) doQuery(ctx context.Context, r *http.Request) (*queryResponse, error) {
-	resp, err := c.HttpCli.Do(context.Background(), r)
-	if err != nil {
-		return nil, err
-	}
-
-	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("ftb status error: %d", resp.StatusCode)
-	}
-
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return nil, err
-	}
-
-	var result queryResponse
-	err = json.Unmarshal(body, &result)
-	if err != nil {
-		return nil, err
-	}
-
-	return &result, nil
-}
-
-func (c *client) GetDimension(ctx context.Context, dataset, dimension string) (*codebook.Dimension, error) {
-	req, err := newGetDimensionReq(c.Host, c.AuthToken, dataset, dimension)
-	if err != nil {
-		return nil, err
-	}
-
-	resp, err := c.HttpCli.Do(ctx, req)
-	if err != nil {
-		return nil, err
-	}
-
-	defer resp.Body.Close()
-
-	if resp.StatusCode != 200 {
-		return nil, fmt.Errorf("incorrect status code expected 200 but was %d", resp.StatusCode)
-	}
-
-	b, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return nil, err
-	}
-
-	var cb codebook.Codebook
-	err = json.Unmarshal(b, &cb)
-	if err != nil {
-		return nil, err
-	}
-
-	return &cb.CodeBook[0], nil
-}
-
-func (c *client) GetDimensionByIndex(ctx context.Context, dataset, dimension string, index int) (*GetDimensionOptionResponse, error) {
-	r, err := newGetDimensionByIndexRequest(c.Host, c.AuthToken, dataset, dimension, index)
-
-	resp, err := c.HttpCli.Do(ctx, r)
-	if err != nil {
-		return nil, err
-	}
-
-	defer resp.Body.Close()
-	if resp.StatusCode != 200 {
-		return nil, fmt.Errorf("error status code: %d", resp.StatusCode)
-	}
-
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return nil, err
-	}
-
-	var dim GetDimensionOptionResponse
-	err = json.Unmarshal(body, &dim)
-	if err != nil {
-		return nil, err
-	}
-
-	return &dim, nil
-}
 
 func (r *QueryResult) IsBlocked() bool {
 	return r.DisclosureControlDetails.Status == StatusBlocked

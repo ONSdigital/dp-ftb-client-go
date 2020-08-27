@@ -1,17 +1,13 @@
 package ftb
 
 import (
-	"context"
 	"errors"
 	"os"
 	"strconv"
 
 	"github.com/ONSdigital/dp-ftb-client-go/codebook"
-	dphttp "github.com/ONSdigital/dp-net/http"
 	"github.com/olekukonko/tablewriter"
 )
-
-var ftbCli = NewClient("", os.Getenv("AUTH_PROXY_TOKEN"), dphttp.DefaultClient)
 
 type ObservationsTable struct {
 	Header []string
@@ -29,47 +25,10 @@ func (o *ObservationsTable) Print() {
 	tw.Render()
 }
 
-func createObservationsTable(datasetName string, dimensionOptions []DimensionOptions, observations []int) (*ObservationsTable, error) {
-	table := newObservationsTable(dimensionOptions)
-
-	dimensionDetailsMap, err := getDimensionDetails(datasetName, dimensionOptions)
+func getObservationsTable(datasetName string, queryOptions []DimensionOptions, dimensions map[string]*codebook.Dimension, observations []int) (*ObservationsTable, error) {
+	table, err := newEmptyObservationsTable(datasetName, queryOptions, dimensions)
 	if err != nil {
 		return nil, err
-	}
-
-	for _, dim := range dimensionOptions {
-		details := dimensionDetailsMap[dim.Name]
-		options := dim.Options
-
-		if len(table.Rows) == 0 {
-			for _, opt := range options {
-				label := details.GetLabelByCode(opt)
-				table.Rows = append(table.Rows, []string{label})
-			}
-			continue
-		}
-
-		// Cant iterate and update an array at the same time.
-		// Create a new array to update and then assign to the original after the iteration.
-		update := make([][]string, 0)
-
-		for _, currentValue := range table.Rows {
-			for _, opt := range options {
-
-				// copy the current row value
-				newRow := make([]string, 0)
-				newRow = append(newRow, currentValue...)
-
-				// append the new value the row
-				label := details.GetLabelByCode(opt)
-				newRow = append(newRow, label)
-
-				// update the tracking copy.
-				update = append(update, newRow)
-			}
-		}
-
-		table.Rows = update
 	}
 
 	if len(table.Rows) != len(observations) {
@@ -85,31 +44,54 @@ func createObservationsTable(datasetName string, dimensionOptions []DimensionOpt
 	return table, nil
 }
 
-func getDimensionDetails(dataset string, dims []DimensionOptions) (map[string]*codebook.Dimension, error) {
-	mapping := make(map[string]*codebook.Dimension, 0)
-
-	for _, d := range dims {
-		details, err := ftbCli.GetDimension(context.Background(), dataset, d.Name)
-		if err != nil {
-			return nil, err
-		}
-
-		mapping[d.Name] = details
-	}
-
-	return mapping, nil
-}
-
-func newObservationsTable(dims []DimensionOptions) *ObservationsTable {
+// Create a new table by calculating all permutations of the dimension options provided in order
+func newEmptyObservationsTable(datasetName string, queryOptions []DimensionOptions, dimensions map[string]*codebook.Dimension) (*ObservationsTable, error) {
 	header := make([]string, 0)
-	for _, d := range dims {
+	for _, d := range queryOptions {
 		header = append(header, d.Name)
 	}
 
 	header = append(header, "Observation")
 
-	return &ObservationsTable{
+	t := &ObservationsTable{
 		Header: header,
 		Rows:   make([][]string, 0),
 	}
+
+	for _, dim := range queryOptions {
+		details := dimensions[dim.Name]
+		options := dim.Options
+
+		if len(t.Rows) == 0 {
+			for _, opt := range options {
+				label := details.GetLabelByCode(opt)
+				t.Rows = append(t.Rows, []string{label})
+			}
+			continue
+		}
+
+		// Cant iterate and update an array at the same time.
+		// Create a new array to update and then assign to the original after the iteration.
+		update := make([][]string, 0)
+
+		for _, currentValue := range t.Rows {
+			for _, opt := range options {
+
+				// copy the current row value
+				newRow := make([]string, 0)
+				newRow = append(newRow, currentValue...)
+
+				// append the new value the row
+				label := details.GetLabelByCode(opt)
+				newRow = append(newRow, label)
+
+				// update the tracking copy.
+				update = append(update, newRow)
+			}
+		}
+
+		t.Rows = update
+	}
+
+	return t, nil
 }

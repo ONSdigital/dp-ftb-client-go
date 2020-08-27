@@ -19,7 +19,7 @@ func main() {
 }
 
 func run() error {
-	ftbCli := ftb.NewClient(fmt.Sprintf("http://%s:10100", os.Getenv("EC2_IP"))çç, os.Getenv("AUTH_PROXY_TOKEN"), dphttp.DefaultClient)
+	ftbCli := ftb.NewClient(fmt.Sprintf("http://%s:10100", os.Getenv("EC2_IP")), os.Getenv("AUTH_PROXY_TOKEN"), dphttp.DefaultClient)
 
 	q := ftb.Query{
 		DatasetName: "People",

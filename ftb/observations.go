@@ -60,10 +60,12 @@ func newEmptyObservationsTable(datasetName string, queryOptions []DimensionOptio
 
 	for _, dim := range queryOptions {
 		details := dimensions[dim.Name]
-		options := dim.Options
+		if len(dim.Options) == 0 {
+			dim.Options = append(dim.Options, details.Codes...)
+		}
 
 		if len(t.Rows) == 0 {
-			for _, opt := range options {
+			for _, opt := range dim.Options {
 				label := details.GetLabelByCode(opt)
 				t.Rows = append(t.Rows, []string{label})
 			}
@@ -75,7 +77,7 @@ func newEmptyObservationsTable(datasetName string, queryOptions []DimensionOptio
 		update := make([][]string, 0)
 
 		for _, currentValue := range t.Rows {
-			for _, opt := range options {
+			for _, opt := range dim.Options {
 
 				// copy the current row value
 				newRow := make([]string, 0)

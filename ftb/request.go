@@ -20,7 +20,16 @@ func newQueryRequest(fq Query, host, authToken string) (*http.Request, error) {
 		q.Add(dimParam, dimName)
 
 		if len(d.Options) > 0 {
-			q.Add(includeParam, fmt.Sprintf("%s,%s", dimName, strings.Join(d.Options, ",")))
+			options := make([]string,0)
+			for _, v := range d.Options {
+				if v != "" {
+					options = append(options, v)
+				}
+			}
+
+			if len(options) > 0 {
+				q.Add(includeParam, fmt.Sprintf("%s,%s", dimName, strings.Join(options, ",")))
+			}
 		}
 	}
 

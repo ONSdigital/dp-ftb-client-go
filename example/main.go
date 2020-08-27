@@ -19,14 +19,14 @@ func main() {
 }
 
 func run() error {
-	ftbCli := ftb.NewClient("", os.Getenv("AUTH_PROXY_TOKEN"), dphttp.DefaultClient)
+	ftbCli := ftb.NewClient(fmt.Sprintf("http://%s:10100", os.Getenv("EC2_IP"))çç, os.Getenv("AUTH_PROXY_TOKEN"), dphttp.DefaultClient)
 
 	q := ftb.Query{
 		DatasetName: "People",
 		DimensionsOptions: []ftb.DimensionOptions{
 			{Name: "COUNTRY", Options: []string{"synE92000001", "synW92000004"}},
-			//{Name: "AGE_2CATS", Options: []string{"0-15", "16-90"}},
-			{Name: "AGE", Options: []string{"20", "21", "22", "23", "34"}},
+			{Name: "AGE_2CATS", Options: []string{"0-15", "16-90"}},
+			//{Name: "AGE", Options: []string{"20", "21", "22", "23", "34"}},
 			{Name: "SEX", Options: []string{"1", "2"}},
 		},
 		RootDimension: "COUNTRY",

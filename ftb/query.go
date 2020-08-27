@@ -49,7 +49,14 @@ func NewQuery(dataset, rootDim string, params map[string][]string) Query {
 	}
 
 	for k, v := range params {
-		q.DimensionsOptions = append(q.DimensionsOptions, DimensionOptions{Name: k, Options: v})
+		options := make([]string,0)
+		for _, opt := range v {
+			if opt != "" {
+				options = append(options, opt)
+			}
+		}
+
+		q.DimensionsOptions = append(q.DimensionsOptions, DimensionOptions{Name: k, Options: options})
 	}
 
 	return q

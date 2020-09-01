@@ -9,12 +9,12 @@ import (
 	"github.com/olekukonko/tablewriter"
 )
 
-type ObservationsTable struct {
+type V4Table struct {
 	Header []string
 	Rows   [][]string
 }
 
-func (o *ObservationsTable) Print() {
+func (o *V4Table) Print() {
 	tw := tablewriter.NewWriter(os.Stdout)
 	tw.SetHeader(o.Header)
 
@@ -25,8 +25,8 @@ func (o *ObservationsTable) Print() {
 	tw.Render()
 }
 
-func getObservationsTable(datasetName string, queryOptions []DimensionOptions, dimensions map[string]*codebook.Dimension, observations []int) (*ObservationsTable, error) {
-	table, err := newEmptyObservationsTable(datasetName, queryOptions, dimensions)
+func getAsV4Table(datasetName string, queryOptions []DimensionOptions, dimensions map[string]*codebook.Dimension, observations []int) (*V4Table, error) {
+	table, err := newEmptyV4Table(datasetName, queryOptions, dimensions)
 	if err != nil {
 		return nil, err
 	}
@@ -45,15 +45,15 @@ func getObservationsTable(datasetName string, queryOptions []DimensionOptions, d
 }
 
 // Create a new table by calculating all permutations of the dimension options provided in order
-func newEmptyObservationsTable(datasetName string, queryOptions []DimensionOptions, dimensions map[string]*codebook.Dimension) (*ObservationsTable, error) {
+func newEmptyV4Table(datasetName string, queryOptions []DimensionOptions, dimensions map[string]*codebook.Dimension) (*V4Table, error) {
 	header := make([]string, 0)
 	for _, d := range queryOptions {
-		header = append(header, d.Name)
+		header = append(header, d.Name, d.Name + " code")
 	}
 
 	header = append(header, "Observation")
 
-	t := &ObservationsTable{
+	t := &V4Table{
 		Header: header,
 		Rows:   make([][]string, 0),
 	}
@@ -67,7 +67,7 @@ func newEmptyObservationsTable(datasetName string, queryOptions []DimensionOptio
 		if len(t.Rows) == 0 {
 			for _, opt := range dim.Options {
 				label := details.GetLabelByCode(opt)
-				t.Rows = append(t.Rows, []string{label})
+				t.Rows = append(t.Rows, []string{label, opt})
 			}
 			continue
 		}
@@ -85,7 +85,7 @@ func newEmptyObservationsTable(datasetName string, queryOptions []DimensionOptio
 
 				// append the new value the row
 				label := details.GetLabelByCode(opt)
-				newRow = append(newRow, label)
+				newRow = append(newRow, []string{label, opt}...)
 
 				// update the tracking copy.
 				update = append(update, newRow)

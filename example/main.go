@@ -42,6 +42,6 @@ func run() error {
 		return nil
 	}
 
-	result.ObservationsTable.Print()
+	result.V4Table.Print()
 	return nil
 }

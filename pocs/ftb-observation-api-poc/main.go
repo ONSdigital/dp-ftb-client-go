@@ -61,34 +61,39 @@ func GetObservations(w http.ResponseWriter, r *http.Request) {
 }
 
 func getObservations(ctx context.Context, datasetName string, queryParams url.Values) (*models.ObservationsDoc, error) {
+	// For POC purposes have to assume the root rule var is COUNTRY.
+	// In the real world this needs to be determined at run time.
 	query := ftb.NewQuery(datasetName, "COUNTRY", queryParams)
 	result, err := ftbCli.Query(ctx, query)
 	if err != nil {
 		return nil, err
 	}
 
-	// wildcard dimensions only
-	dimensions := make(map[string]*models.DimensionObject, 0)
+	wildCards := make(map[string]ftb.DimensionOptions, 0)
+	multiSelection := make(map[string]ftb.DimensionOptions, 0)
+
 	for _, d := range query.DimensionsOptions {
 		if len(d.Options) == 0 {
-			dimensions[d.Name] = &models.DimensionObject{
-				HRef:  "",
-				ID:    d.Name,
-				Label: d.Name,
-			}
+			wildCards[d.Name] = d
+		} else if len(d.Options) > 1 {
+			multiSelection[d.Name] = d
 		}
 	}
 
 	observations := make([]models.Observation, 0)
 
-	for _, row := range result.ObservationsTable.Rows {
+	for _, row := range result.V4Table.Rows {
 		dims := make(map[string]*models.DimensionObject, 0)
 
-		for i := 0; i < len(row)-1; i++ {
-			dims[result.ObservationsTable.Header[i]] = &models.DimensionObject{
-				HRef:  "",
-				ID:    row[i],
-				Label: row[i],
+		for i := 0; i < len(row)-1; i += 2 {
+			dimName := result.V4Table.Header[i]
+
+			if isWildcardOrMultiSelection(dimName, wildCards, multiSelection) {
+				dims[result.V4Table.Header[i]] = &models.DimensionObject{
+					HRef:  fmt.Sprintf("%s/v6/codebook/%s?var=%s", ftbHost, datasetName, dimName),
+					ID:    row[i+1],
+					Label: row[i],
+				}
 			}
 		}
 
@@ -105,7 +110,7 @@ func getObservations(ctx context.Context, datasetName string, queryParams url.Va
 		if len(d.Options) > 0 {
 			dimensionsMap[d.Name] = models.Option{
 				LinkObject: &dataset.Link{
-					URL: fmt.Sprintf("%s/v6/codebook/%s?var=%s", ftbHost, datasetName, d.Name),
+					URL: getLink(datasetName, d.Name),
 					ID:  d.Options[0],
 				},
 			}
@@ -118,10 +123,21 @@ func getObservations(ctx context.Context, datasetName string, queryParams url.Va
 		Links:             nil,
 		Observations:      observations,
 		Offset:            0,
-		TotalObservations: 0,
+		TotalObservations: len(observations),
 		UnitOfMeasure:     "",
 		UsageNotes:        nil,
 	}
 
 	return doc, nil
+}
+
+func getLink(datasetName, dimensionName string) string {
+	return fmt.Sprintf("%s/v6/codebook/%s?var=%s", ftbHost, datasetName, dimensionName)
+}
+
+func isWildcardOrMultiSelection(dimensionName string, wildCards map[string]ftb.DimensionOptions, multiSelections map[string]ftb.DimensionOptions) bool {
+	_, isWildCard := wildCards[dimensionName]
+	_, isMultiSelection := multiSelections[dimensionName]
+
+	return isWildCard || isMultiSelection
 }

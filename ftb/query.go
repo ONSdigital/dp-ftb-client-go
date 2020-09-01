@@ -31,7 +31,7 @@ type DimensionOptions struct {
 // return
 type QueryResult struct {
 	DisclosureControlDetails *DisclosureControlDetails `json:"disclosure_control_details,omitempty"`
-	ObservationsTable        *ObservationsTable        `json:"observations,omitempty"`
+	V4Table                  *V4Table                  `json:"observations,omitempty"`
 }
 
 // return
@@ -80,7 +80,7 @@ func (c *client) Query(ctx context.Context, q Query) (*QueryResult, error) {
 
 	result := &QueryResult{
 		DisclosureControlDetails: dcStatus,
-		ObservationsTable:        nil,
+		V4Table:                  nil,
 	}
 
 	if dcStatus.Status == StatusBlocked {
@@ -92,12 +92,12 @@ func (c *client) Query(ctx context.Context, q Query) (*QueryResult, error) {
 		return nil, err
 	}
 
-	table, err := getObservationsTable(q.DatasetName, q.DimensionsOptions, dimensions, resp.Counts)
+	table, err := getAsV4Table(q.DatasetName, q.DimensionsOptions, dimensions, resp.Counts)
 	if err != nil {
 		return nil, err
 	}
 
-	result.ObservationsTable = table
+	result.V4Table = table
 	return result, nil
 }
 

@@ -1,0 +1,21 @@
+{
+  "dataset": {
+    "id": "People",
+    "edition": "time-series",
+    "version": 1
+  },
+  "dimensions": [
+    {
+      "name": "OA",
+      "options": []
+    },
+    {
+      "name": "Age",
+      "options": []
+    },
+    {
+      "name": "Sex",
+      "options": []
+    }
+  ]
+}

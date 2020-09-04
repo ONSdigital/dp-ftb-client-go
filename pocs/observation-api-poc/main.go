@@ -23,6 +23,12 @@ var (
 	ftbCli  = ftb.NewClient(ftbHost, os.Getenv("AUTH_PROXY_TOKEN"), dpHTTP.DefaultClient)
 )
 
+// For the purposes of the POC it easier to create a new type embedding the models.ObservationsDoc and add a new DisclosureControlDetails field.
+type ExtendedObservationsResponse struct {
+	*models.ObservationsDoc
+	DisclosureControlDetails *ftb.DisclosureControlDetails
+}
+
 func main() {
 	r := mux.NewRouter()
 	r.HandleFunc("/datasets/{dataset_id}/editions/{edition}/versions/{version}/observations", GetObservations).Methods(http.MethodGet)
@@ -60,14 +66,30 @@ func GetObservations(w http.ResponseWriter, r *http.Request) {
 	w.Write(b)
 }
 
-func getObservations(ctx context.Context, datasetName string, queryParams url.Values) (*models.ObservationsDoc, error) {
-	// For POC purposes have to assume the root rule var is COUNTRY.
-	// In the real world this needs to be determined at run time.
-	query := ftb.NewQuery(datasetName, "COUNTRY", queryParams)
+func getObservations(ctx context.Context, datasetName string, queryParams url.Values) (*ExtendedObservationsResponse, error) {
+	// For POC purposes have to manually set the value. In the real use case we will need to be able to determine this at run time.
+	query := ftb.NewQuery(datasetName, "OA", queryParams) //synW00007765
 	result, err := ftbCli.Query(ctx, query)
 	if err != nil {
 		return nil, err
 	}
+
+	observationsDoc := &ExtendedObservationsResponse{
+		ObservationsDoc:          &models.ObservationsDoc{},
+		DisclosureControlDetails: &ftb.DisclosureControlDetails{
+			Status:         ftb.StatusOK,
+			Dimension:      "",
+			BlockedOptions: nil,
+			BlockedCount:   0,
+		},
+	}
+
+	if result.IsBlocked() {
+		observationsDoc.DisclosureControlDetails = result.DisclosureControlDetails
+		return observationsDoc, nil
+	}
+
+	log.Event(ctx, "query completed", log.INFO)
 
 	wildCards := make(map[string]ftb.DimensionOptions, 0)
 	multiSelection := make(map[string]ftb.DimensionOptions, 0)
@@ -117,18 +139,11 @@ func getObservations(ctx context.Context, datasetName string, queryParams url.Va
 		}
 	}
 
-	doc := &models.ObservationsDoc{
-		Dimensions:        dimensionsMap,
-		Limit:             0,
-		Links:             nil,
-		Observations:      observations,
-		Offset:            0,
-		TotalObservations: len(observations),
-		UnitOfMeasure:     "",
-		UsageNotes:        nil,
-	}
+	observationsDoc.Dimensions = dimensionsMap
+	observationsDoc.Observations = observations
+	observationsDoc.TotalObservations = len(observations)
 
-	return doc, nil
+	return observationsDoc, nil
 }
 
 func getLink(datasetName, dimensionName string) string {

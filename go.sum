@@ -6,6 +6,8 @@ github.com/ONSdigital/dp-api-clients-go v1.10.1/go.mod h1:pLIrakQgoa+W23OodCaSI8
 github.com/ONSdigital/dp-authorisation v0.1.0/go.mod h1:rT81tcvWto5/cUWUFd0Q6gTqBoRfQmD6Qp0sq7FyiMg=
 github.com/ONSdigital/dp-filter-api v0.0.0-20200521142607-bc24317b3df9 h1:eaes6+vK9sTNjqp+qrQyapGdO3FNJ1xN286+pxc9W/c=
 github.com/ONSdigital/dp-filter-api v0.0.0-20200521142607-bc24317b3df9/go.mod h1:kCrEdhNGYx3O4F+z9DlHiAwluq4ntqCsg18Hv4k3x6Q=
+github.com/ONSdigital/dp-filter-api v0.0.0-20200819131225-2e2be594ecf9 h1:9XzSQQPK05wrJRQk+xnNRCnSnlyASfCHTlgW+kx+I3Q=
+github.com/ONSdigital/dp-filter-api v0.0.0-20200819131225-2e2be594ecf9/go.mod h1:kCrEdhNGYx3O4F+z9DlHiAwluq4ntqCsg18Hv4k3x6Q=
 github.com/ONSdigital/dp-frontend-models v1.1.0/go.mod h1:TT96P7Mi69N3Tc/jFNdbjiwG4GAaMjP26HLotFQ6BPw=
 github.com/ONSdigital/dp-graph/v2 v2.0.3/go.mod h1:jh7BsDGMG0VgNtSvc3hlA2wXs3H1cwdWCp84VGzMVB8=
 github.com/ONSdigital/dp-graph/v2 v2.0.6/go.mod h1:jh7BsDGMG0VgNtSvc3hlA2wXs3H1cwdWCp84VGzMVB8=
@@ -163,6 +165,7 @@ golang.org/x/sys v0.0.0-20200116001909-b77594299b42/go.mod h1:h1NjWce9XRLGQEsW7w
 golang.org/x/sys v0.0.0-20200223170610-d5e6a3e2c0ae/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=
 golang.org/x/sys v0.0.0-20200323222414-85ca7c5b95cd h1:xhmwyvizuTgC2qz7ZlMluP20uW+C3Rm0FD/WLDX8884=
 golang.org/x/sys v0.0.0-20200323222414-85ca7c5b95cd/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=
+golang.org/x/sys v0.0.0-20200515095857-1151b9dac4a9 h1:YTzHMGlqJu67/uEo1lBv0n3wBXhXNeUbB1XfN2vmTm0=
 golang.org/x/sys v0.0.0-20200515095857-1151b9dac4a9/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=
 golang.org/x/text v0.3.0/go.mod h1:NqM8EUOU14njkJ3fqMW+pc6Ldnwhi/IjpwHt7yyuwOQ=
 golang.org/x/text v0.3.2/go.mod h1:bEr9sfX3Q8Zfm5fL9x+3itogRgK3+ptLWKqgva+5dAk=

@@ -5,6 +5,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
 )
 
@@ -33,6 +34,8 @@ func newQueryRequest(fq Query, host, authToken string) (*http.Request, error) {
 		}
 	}
 
+	q.Add("limit", strconv.Itoa(fq.Limit))
+
 	ftbURL.RawQuery = q.Encode()
 	r, err := httpRequestWithAuthHeader(authToken, http.MethodGet, ftbURL.String(), nil)
 	if err != nil {
@@ -43,7 +46,7 @@ func newQueryRequest(fq Query, host, authToken string) (*http.Request, error) {
 }
 
 func newGetDimensionByIndexRequest(host, authToken, dataset, dimension string, index int) (*http.Request, error) {
-	reqURL := fmt.Sprintf("%s/v6/datasets/%s/dimensions/%s/index/%d", host, dataset, dimension, index)
+	reqURL := fmt.Sprintf("%s/v6/datasets/%s/dimensions/%s/index/%d", host, dataset, strings.ToUpper(dimension), index)
 	return httpRequestWithAuthHeader(authToken, http.MethodGet, reqURL, nil)
 }
 

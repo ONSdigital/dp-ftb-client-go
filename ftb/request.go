@@ -10,7 +10,7 @@ import (
 )
 
 func newQueryRequest(fq Query, host, authToken string) (*http.Request, error) {
-	ftbURL, err := url.Parse(fmt.Sprintf("%s/v6/query/%s?", host, fq.DatasetName))
+	ftbURL, err := url.Parse(fmt.Sprintf("%s/v8/query/%s?", host, fq.DatasetName))
 	if err != nil {
 		return nil, err
 	}
@@ -21,7 +21,7 @@ func newQueryRequest(fq Query, host, authToken string) (*http.Request, error) {
 		q.Add(dimParam, dimName)
 
 		if len(d.Options) > 0 {
-			options := make([]string,0)
+			options := make([]string, 0)
 			for _, v := range d.Options {
 				if v != "" {
 					options = append(options, v)
@@ -46,7 +46,7 @@ func newQueryRequest(fq Query, host, authToken string) (*http.Request, error) {
 }
 
 func newGetDimensionByIndexRequest(host, authToken, dataset, dimension string, index int) (*http.Request, error) {
-	reqURL := fmt.Sprintf("%s/v6/datasets/%s/dimensions/%s/index/%d", host, dataset, strings.ToUpper(dimension), index)
+	reqURL := fmt.Sprintf("%s/v8/datasets/%s/dimensions/%s/index/%d", host, dataset, strings.ToUpper(dimension), index)
 	return httpRequestWithAuthHeader(authToken, http.MethodGet, reqURL, nil)
 }
 
@@ -61,6 +61,6 @@ func httpRequestWithAuthHeader(authToken, method, url string, body io.Reader) (*
 }
 
 func newGetDimensionReq(host, authToken, dataset, dimension string) (*http.Request, error) {
-	ftbURL := fmt.Sprintf("%s/v6/codebook/%s?var=%s", host, dataset, dimension)
+	ftbURL := fmt.Sprintf("%s/v8/codebook/%s?var=%s", host, dataset, dimension)
 	return httpRequestWithAuthHeader(authToken, http.MethodGet, ftbURL, nil)
 }

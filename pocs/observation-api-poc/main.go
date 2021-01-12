@@ -75,7 +75,7 @@ func getObservations(ctx context.Context, datasetName string, queryParams url.Va
 	}
 
 	observationsDoc := &ExtendedObservationsResponse{
-		ObservationsDoc:          &models.ObservationsDoc{},
+		ObservationsDoc: &models.ObservationsDoc{},
 		DisclosureControlDetails: &ftb.DisclosureControlDetails{
 			Status:         ftb.StatusOK,
 			Dimension:      "",
@@ -112,7 +112,7 @@ func getObservations(ctx context.Context, datasetName string, queryParams url.Va
 
 			if isWildcardOrMultiSelection(dimName, wildCards, multiSelection) {
 				dims[result.V4Table.Header[i]] = &models.DimensionObject{
-					HRef:  fmt.Sprintf("%s/v6/codebook/%s?var=%s", ftbHost, datasetName, dimName),
+					HRef:  fmt.Sprintf("%s/v8/codebook/%s?var=%s", ftbHost, datasetName, dimName),
 					ID:    row[i+1],
 					Label: row[i],
 				}
@@ -147,7 +147,7 @@ func getObservations(ctx context.Context, datasetName string, queryParams url.Va
 }
 
 func getLink(datasetName, dimensionName string) string {
-	return fmt.Sprintf("%s/v6/codebook/%s?var=%s", ftbHost, datasetName, dimensionName)
+	return fmt.Sprintf("%s/v8/codebook/%s?var=%s", ftbHost, datasetName, dimensionName)
 }
 
 func isWildcardOrMultiSelection(dimensionName string, wildCards map[string]ftb.DimensionOptions, multiSelections map[string]ftb.DimensionOptions) bool {
